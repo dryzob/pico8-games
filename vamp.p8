@@ -28,6 +28,8 @@ end
 vamp={
 	x=0,
 	y=0,
+	w=7,
+	h=3,
 	spe=1,
 	sprite=1,
 }
@@ -36,9 +38,9 @@ function dvamp()
 	spr(vamp.sprite,vamp.x,vamp.y)
 	
 	if debug then
-	 local x1=vamp.x
-	 local y1=vamp.y
-	 local x2=(vamp.x+7)
+	 local x1=vamp.x+1
+	 local y1=vamp.y+5
+	 local x2=(vamp.x+6)
 	 local y2=(vamp.y+7)
 	
 	 rect(x1,y1,x2,y2,9)
@@ -56,47 +58,44 @@ wall=6
 inct=5
 
 -- todo: fix cornering
-function colision(obj,col)
-	local x1=(obj.x+1)/8
-	local y1=(obj.y+5)/8
-	local x2=(obj.x+6)/8
-	local y2=(obj.y+7)/8
+function colision(x,y,w,h,col)
+	local collide=false
 	
-	local a=fget(mget(x1,y1),col)
-	local b=fget(mget(x1,y2),col)
-	local c=fget(mget(x2,y2),col)
-	local d=fget(mget(x2,y1),col)
-	
-	-- y
-	if (a and d) or (b and c) then
-	 return 1
-	-- x
-	elseif (a and b) or (c and d) then 
-		return 2
-	-- no collision
-	else 
-		return 0
+	for i=x,x+w do
+		if(fget(mget(i/8,y/8))>0)or
+			(fget(mget(i/8,(y+h)/8))>0)then
+		 	collide=true
+		end
 	end
+	
+	for i=y,y+h do
+  if(fget(mget(x/8,i/8))>0)or
+   (fget(mget((x+w)/8,i/8))>0)then
+    collide=true
+  end
+ end
+ return collide
 end
 
 function move(act)
-	--last pos
-	local lx=act.x
-	local ly=act.y
+	local dx=0
+	local dy=0
 
-	if(btn(⬅️)) act.x -= act.spe
-	if(btn(➡️)) act.x += act.spe
-	if(btn(⬆️)) act.y -= act.spe
-	if(btn(⬇️)) act.y += act.spe
+	if(btn(⬅️)) dx -= act.spe
+	if(btn(➡️)) dx += act.spe
+	if(btn(⬆️)) dy -= act.spe
+	if(btn(⬇️)) dy += act.spe
 	
 	-- colision
-	local dir=colision(act,wall)
-	if dir == 2 then
-		act.x=lx
+	if colision(act.x+dx,act.y,act.w,act.h,wall) then
+		dx=0
 	end
-	if dir == 1 then
-		act.y=ly
+	if colision(act.x,act.y+dy,act.w,act.h,wall) then
+		dy=0
 	end
+	
+	act.x+=dx
+	act.y+=dy
 end
 __gfx__
 00000000330000033344444337777773331116133e32233333000033000000003333333333333333333333333373333333000003333333330000000000000000
