@@ -9,6 +9,7 @@ __lua__
 function _init()
 	t=0
 	p_ani={240,241,242,243}
+	p_dir={0,1,2,3}
 	
 	_upd=upd_game
 	_drw=drw_game
