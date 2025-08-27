@@ -16,7 +16,7 @@ function _init()
 	startgame()
 end
 
-function _update()
+function _update60()
 	t+=1
 	_upd()
 end
