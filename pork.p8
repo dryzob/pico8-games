@@ -4,6 +4,7 @@ __lua__
 --[[rougelike game
 	tutorial found on youtube
 	by lazy devs
+	last ep: 13
 ]]
 function _init()
 	t=0
