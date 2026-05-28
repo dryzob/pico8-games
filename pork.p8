@@ -4,10 +4,12 @@ __lua__
 --[[rougelike game
 	tutorial found on youtube
 	by lazy devs
-	last ep: 13
+	last ep finished: 14
 ]]
 function _init()
 	t=0
+	
+	dpal={0,1,1,2,1,13,6,4,4,9,3,13,1,13,14}
 		
 	dirx={-1,1,0,0,1,1,-1,-1}
 	diry={0,0,-1,1,-1,1,1,-1}
@@ -16,8 +18,6 @@ function _init()
 	mob_atk={1,1}
 	mob_hit={5,2}
 	
-	_upd=upd_game
-	_drw=drw_game
 	debug={}
 	startgame()
 	
@@ -32,6 +32,8 @@ end
 function _draw()
 	_drw()
 	drawind()
+	dohpwind()
+	checkfade()
 	cursor(4,4)
 	color(8)
 	for txt in all(debug) do
@@ -40,6 +42,7 @@ function _draw()
 end
 
 function startgame()
+	fadeperc=1
 	buttbuff=-1
 	mob={}
 	dmob={}
@@ -58,6 +61,8 @@ function startgame()
 	wind={}
 	float={}
 	talkwind=nil
+	
+	hpwind=addwind(5,5,28,13,{})
 	
 	_upd=upd_game
 	_drw=drw_game
@@ -110,6 +115,7 @@ end
 
 function upd_gameover()
 	if btnp(❎) then
+		fadeout()
 		startgame()
 	end
 end
@@ -177,7 +183,7 @@ end
 
 function drw_gameover()
 	cls()
-	print("u ded",50,50)
+	print("git gud",50,50)
 end
 -->8
 -- tools
@@ -207,6 +213,43 @@ end
 function dist(fx,fy,tx,ty)
 	local dx,dy=fx-tx,fy-ty
 	return sqrt(dx*dx+dy*dy)
+end
+
+function dofade()
+ local p,kmax,col,k=flr(mid(0,fadeperc,1)*100)
+ for j=1,15 do
+  col = j
+  kmax=flr((p+(j*1.46))/22)
+  for k=1,kmax do
+   col=dpal[col]
+  end
+  pal(j,col,1)
+ end
+end
+
+function checkfade()
+	if fadeperc>0 then
+		fadeperc=max(fadeperc-0.04,0)
+		dofade()
+	end
+end
+
+function wait(_wait)
+	repeat
+		_wait-=1
+		flip()
+	until _wait<0
+end
+
+function fadeout(spd,_wait)
+ if (spd==nil) spd=0.04
+ if (_wait==nil) _wait=0
+ repeat
+  fadeperc=min(fadeperc+spd,1)
+  dofade()
+  flip()
+ until fadeperc==1
+ wait(_wait)
 end
 -->8
 -- gameplay
@@ -316,6 +359,7 @@ function checkend()
 	if p_mob.hp <= 0 then
 		_upd=upd_gameover
 		_drw=drw_gameover
+		fadeout()
 		return false
 	end
 	return true
@@ -387,6 +431,15 @@ function dofloat()
 			del(float,f)
 		end
 	end
+end
+
+function dohpwind()
+	hpwind.txt[1]="♥"..p_mob.hp.."/"..p_mob.hpmax
+	local hpy=5
+	if p_mob.y<8 then
+		hpy=110
+	end
+	hpwind.y+=(hpy-hpwind.y)/5
 end
 -->8
 -- mobs
