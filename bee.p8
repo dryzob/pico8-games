@@ -10,6 +10,9 @@ function _init()
 	-- this might be moved
 	t=0
 	bees={}
+	debug={}
+	money=0
+	
 	make_bee(bee_spawn[1],bee_spawn[2],10)
 	_upd=upd_bview
 	_drw=drw_bview
@@ -35,6 +38,7 @@ function _draw()
 	drw_menu()
 	_drw()
 	drw_mouse()
+	drw_money()
 end
 
 function upd_bview()
@@ -57,17 +61,21 @@ function drawspr(_spr,_x,_y,_c,_f)
 	palt()
 end
 
-function find(t)
+function find(tile)
 	local mx=15*8
 	local my=8*8
 	for i=0,mx do
 		for j=0,my do
-			if mget(i,j)==t then
-				return {i,j}
+			if mget(i,j)==tile then
+				return {i*8,j*8}
 			end
 		end
 	end
 	return {0,0}
+end
+
+function getframe(ani,r)
+	return ani[flr(t/r)%#ani+1]
 end
 -->8
 -- draw
@@ -82,7 +90,8 @@ function drw_bview()
 end
 
 function drw_bee(b)
-	drawspr(b.sprite,b.x,b.y,b.col,b.flp)
+	local r=2
+	drawspr(getframe(b.sprite,r),b.x,b.y,b.col,b.flp)
 end
 
 function drw_mouse()
@@ -106,22 +115,39 @@ function drw_menu()
 		gap+=1
 	end
 end	
+
+function drw_money()
+	local x=4
+	local y=4
+	cursor(x-1,y,0)
+	print("$"..money)
+	cursor(x+1,y,0)
+	print("$"..money)
+	cursor(x,y+1,0)
+	print("$"..money)
+	cursor(x,y-1,0)
+	print("$"..money)
+	cursor(x,y,9)
+	print("$"..money)
+end
 -->8
 --bees
 
-bee_spr=1
+bee_spr={1,2}
 bee_spawn={2*8,6*8}
 targets={0,30,4}
 
 function make_bee(bx,by,bcol)
 	local b={
 		x=bx,y=by,
-		sprite=bee_spr,
+		sprite={bee_spr[1],bee_spr[2]},
 		col=bcol,
 		flp=false,
-		tar=targets[3],
+		tar=targets[1],
 		goal={0,0},
-		fnd=false
+		fnd=false,
+		hover=false,
+		pol=false
 	}
 	add(bees,b)
 	return b
@@ -129,10 +155,14 @@ end
 
 function bee_do()
 	for b in all(bees) do
-		if b.goal=={b.x,b.y} then
-			-- retarget
-			print("new target")
+
+		if b.goal[1]==b.x and b.goal[2]==b.y then
+			b.fnd=false
+			if mget(b.x/8,b.y/8)==30 then
+				money+=1
+			end
 		end
+		
 		if not b.fnd then
 			bee_find(b)
 		else
@@ -141,37 +171,73 @@ function bee_do()
 	end
 end
 
-function bee_move(b)
-	if b.x>b.goal[1] then
-		b.x-=1
-	elseif b.x<b.goal[1] then
-		b.x+=1
+function bee_move(b) 
+	local t=10
+	
+	local dx=b.goal[1]-b.x
+	local dy=b.goal[2]-b.y
+	
+	if dx>0 then
+		b.flp=false
+	else
+		b.flp=true
 	end
-	if b.y>b.goal[2] then
-		b.y+=1
-	elseif b.y<b.goal[2] then
-		b.y-=1
+	
+	-- far from goal
+	if dx>t or dx<-t then
+		if dy<t then
+			local ran=rnd(2)
+			if ran>1 then
+				b.y+=1
+			elseif ran<1 then
+				b.y-=1
+			end
+		elseif dy>=t then
+			b.y+=1
+		elseif dy<=-t then
+			b.y-=1
+		end
+		if b.x>b.goal[1] then
+			b.x-=1
+		elseif b.x<b.goal[1] then
+			b.x+=1
+		end
+	-- close to goal
+	else
+		if b.x>b.goal[1] then
+			b.x-=1
+		elseif b.x<b.goal[1] then
+			b.x+=1
+		end
+		if b.y>b.goal[2] then
+			b.y-=1
+		elseif b.y<b.goal[2] then
+			b.y+=1
+		end
 	end
 end
 
 function bee_find(b)
 	if b.tar==targets[1] then
-		b.tar=targets[3]
-	end
-	if b.tar==targets[2] then
-		b.goal=find(targets[2])
-	end
-	if b.tar==targets[3] then
 		b.goal=find(targets[3])
+		b.tar=targets[3]
+	elseif b.tar==targets[2] then
+		b.goal=find(targets[2])
+		b.tar=targets[3]
+	elseif b.tar==targets[3] then
+		b.goal=find(targets[3])
+		b.tar=targets[2]
 	end
-	if b.goal!={0,0} then
-		b.fnd=true
-	end
+	b.fnd=true
+end
+
+function bee_hover(b)
+
 end
 __gfx__
 00000000ffffffffffffffff00000000ccccccccccccccccaaaaaaaa000000000000000000000000000000000000000000000000ccccccccccccccccffffffff
-00000000ffffffffffff7fff00000000ccaaacccccccccccaaaaaaaa000000000000000000000000000000000000000000000000ccccccccccccccccffffffff
-00700700fff77fffffff7fff00000000cca7acccccccccccaaaaaaaa000000000000000000000000000000000000000000000000ccccccccccccccccff06ffff
+00000000ffffffffffffffff00000000ccaaacccccccccccaaaaaaaa000000000000000000000000000000000000000000000000ccccccccccccccccffffffff
+00700700fff7ffffffff7fff00000000cca7acccccccccccaaaaaaaa000000000000000000000000000000000000000000000000ccccccccccccccccff06ffff
 00077000ff6066ffff6066ff00000000ccaaacccccccccccaaaaaaaa000000000000000000000000000000000000000000000000ccccccccccccccccff6606ff
 00077000ff6066ffff6066ff00000000ccc3ccccccccccccaaaaaaaa000000000000000000000000000000000000000000000000ccccc9aaaa7cccccfff006ff
 00700700ffffffffffffffff00000000ccc3c3ccccccccccaaaaaaaa000000000000000000000000000000000000000000000000ccccc9aaaaacccccfff660ff
