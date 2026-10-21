@@ -7,12 +7,14 @@ __lua__
 
 function _init()
 	poke(0x5f2d, 1)
+	pq("--------------------------")
 	-- this might be moved
 	t=0
 	bees={}
-	debug={}
-	money=0
+	buttons={}
+	money=100
 	
+	gen_menu()
 	make_bee(bee_spawn[1],bee_spawn[2],10)
 	_upd=upd_bview
 	_drw=drw_bview
@@ -22,12 +24,17 @@ function _update()
 	t+=1
 	if t>30 then
 		t=0
+		pq("--------------")
 	end
- -- start (do later)
- -- bee view
- if btn(❎) then
- 	make_bee(stat(32),stat(33),10)
+	
+	if t%10==0 then
+		
 	end
+	
+	
+	click_but()
+	but_bounce()
+	
 	bee_do()
 end
 
@@ -77,10 +84,34 @@ end
 function getframe(ani,r)
 	return ani[flr(t/r)%#ani+1]
 end
+
+function printb(txt,x,y,col)
+	print(txt,x-1,y,0)
+	print(txt,x+1,y,0)
+	print(txt,x,y+1,0)
+	print(txt,x,y-1,0)
+	print(txt,x,y,col)
+end
+
+-- pq by pancelor: lexaloffle.com/bbs/?tid=42367
+function pq(...)printh(qq(...))return...end
+function qq(...)local r=""for i=1,select("#",...)do r..=_q(select(i,...),4).." "end return r end
+function _q(t,d)if(type(t)~="table"or d<=0)return tostr(t)
+local r="{"for k,v in next,t do r..=tostr(k).."=".._q(v,d-1)..","end return r.."}"end
+
+-- overlap function by mboffin on itch.io
+function overlap(a,b)
+ return not (a.x>b.x+b.w 
+          or a.y>b.y+b.h 
+          or a.x+a.w<b.x 
+          or a.y+a.h<b.y)
+end
 -->8
 -- draw
 
 mouse_spr=15
+
+
 
 function drw_bview()
  -- sprites for bees
@@ -100,35 +131,32 @@ function drw_mouse()
 end
 
 function drw_menu()
-	-- bunch of squares
-	-- these will have hitboxes
-	-- (buttons)
-	local maxh=9*8
-	local minh=14*8
-	local sqw=25
-	local sqh=10
-	
-	local numsq=(minh-maxh)/sqh
-	local gap=1
-	for i=0,numsq do
-		rrectfill(4,(maxh+gap+i*sqh),sqw,sqh,1,5)
-		gap+=1
+	--buttons
+	for but in all(buttons) do
+		local w,h=but.x2-but.x1,but.y2-but.y1
+		rrectfill(but.x1,but.y1,w,h,1,5)
+		rrect(but.x1,but.y1,w,h,1,0)
+			if but.down==false then
+				rrectfill(but.x1+2,but.y1-2,w-4,h,1,6)
+				rrect(but.x1+2,but.y1-2,w-4,h,1,0)
+			else
+				rrectfill(but.x1+2,but.y1-1,w-4,h,1,6)
+				rrect(but.x1+2,but.y1-1,w-4,h,1,0)
+			end
+		-- labels
+		local lx,ly=but.x1+w+4,but.y1+3
+		printb(but.upg.cnt..": "..but.upg.txt,lx,ly,7)
+		-- price
+		lx,ly=but.x1+5,but.y1+2
+		printb("$"..but.upg.prc,lx,ly,7)
 	end
+	
 end	
 
 function drw_money()
 	local x=4
 	local y=4
-	cursor(x-1,y,0)
-	print("$"..money)
-	cursor(x+1,y,0)
-	print("$"..money)
-	cursor(x,y+1,0)
-	print("$"..money)
-	cursor(x,y-1,0)
-	print("$"..money)
-	cursor(x,y,9)
-	print("$"..money)
+	printb("$"..money,x,y,9)
 end
 -->8
 --bees
@@ -136,6 +164,10 @@ end
 bee_spr={1,2}
 bee_spawn={2*8,6*8}
 targets={0,30,4}
+
+bee_speed=0.25
+bee_hovert=5*30
+bee_prod=1
 
 function make_bee(bx,by,bcol)
 	local b={
@@ -147,6 +179,7 @@ function make_bee(bx,by,bcol)
 		goal={0,0},
 		fnd=false,
 		hover=false,
+		ht=0,
 		pol=false
 	}
 	add(bees,b)
@@ -155,8 +188,10 @@ end
 
 function bee_do()
 	for b in all(bees) do
-
-		if b.goal[1]==b.x and b.goal[2]==b.y then
+	
+		if b.hover==true then
+			bee_hover(b)
+		elseif abs(b.goal[1]-b.x)<2 and abs(b.goal[2]-b.y)<2 then
 			b.fnd=false
 			if mget(b.x/8,b.y/8)==30 then
 				money+=1
@@ -188,31 +223,31 @@ function bee_move(b)
 		if dy<t then
 			local ran=rnd(2)
 			if ran>1 then
-				b.y+=1
+				b.y+=bee_speed
 			elseif ran<1 then
-				b.y-=1
+				b.y-=bee_speed
 			end
 		elseif dy>=t then
-			b.y+=1
+			b.y+=bee_speed
 		elseif dy<=-t then
-			b.y-=1
+			b.y-=bee_speed
 		end
 		if b.x>b.goal[1] then
-			b.x-=1
+			b.x-=bee_speed
 		elseif b.x<b.goal[1] then
-			b.x+=1
+			b.x+=bee_speed
 		end
 	-- close to goal
 	else
 		if b.x>b.goal[1] then
-			b.x-=1
+			b.x-=bee_speed
 		elseif b.x<b.goal[1] then
-			b.x+=1
+			b.x+=bee_speed
 		end
 		if b.y>b.goal[2] then
-			b.y-=1
+			b.y-=bee_speed
 		elseif b.y<b.goal[2] then
-			b.y+=1
+			b.y+=bee_speed
 		end
 	end
 end
@@ -234,6 +269,126 @@ end
 function bee_hover(b)
 
 end
+-->8
+-- ui
+
+upgrades={-- default values
+	-- bee count
+		{txt="bEES",
+			prc=5,
+			cnt=1},
+	-- speed
+		{txt="sPEED",
+			prc=10,
+			cnt=1},
+	-- hover time
+		{txt="hOVER tIME",
+			prc=50,
+			cnt=1},
+	-- productivity
+		{txt="pRODUCTIVITY",
+			prc=100,
+			cnt=1}
+		}
+
+function make_but(bx1,bx2,by1,by2,bupg)
+	but={
+		x1=bx1,
+		x2=bx2,
+		y1=by1,
+		y2=by2,
+		down=false,
+		dt=0,
+		upg=bupg
+	}
+	add(buttons,but)
+end
+
+function gen_menu()
+ 
+	local maxh=9*8
+	local minh=14*8
+	-- buttons
+	local sqw=25
+	local sqh=12
+	
+	local numsq=(minh-maxh)/sqh
+	local gap=2
+	local upval=1
+	for i=0,numsq do
+		local x1=4
+		local x2=x1+sqw
+		local y1=(maxh+gap+i*sqh)
+		local y2=y1+sqh
+		gap+=2
+		make_but(x1,x2,y1,y2,upgrades[upval])
+		upval+=1
+	end
+end
+
+function but_collision(but)
+	-- rewrite collider and this func
+	local m={
+			x=stat(32),y=stat(33),w=1,h=1
+		}
+	local b={
+			x=but.x1,y=but.y1,
+			w=but.x2-but.x1,h=but.y2-but.y1
+		}	
+	local c=overlap(m,b)	
+	return c	
+end
+
+function but_bounce()
+ local down_time=5
+	for b in all(buttons) do
+		if b.down==true then
+			b.dt+=1
+		end
+		if b.dt>down_time then
+			b.dt=0
+			b.down=false
+		end
+	end
+end
+
+function click_but()
+	local c=false
+	if stat(34)==1 then
+		for b in all(buttons) do
+			if b.down==false then
+				c=but_collision(b)
+				if c then
+					buy_upgrade(b)
+					b.down=true
+					b.dt=0
+				end
+			end
+		end
+	end
+end
+
+function buy_upgrade(but)
+	local upg_name=but.upg.txt
+	local upg_price=but.upg.prc
+	
+	if money>=upg_price then
+		if upg_name=="bEES" then
+			make_bee(bee_spawn[1],bee_spawn[2],10)
+		elseif upg_name=="sPEED" then
+			bee_speed+=0.25
+			pq("speed: "..bee_speed)
+		elseif upg_name=="hOVER tIME" then
+		
+		elseif upg_name=="pRODUCTIVITY" then
+		
+		end
+		money-=but.upg.prc
+		but.upg.prc*=2
+		but.upg.cnt+=1
+	end
+end
+
 __gfx__
 00000000ffffffffffffffff00000000ccccccccccccccccaaaaaaaa000000000000000000000000000000000000000000000000ccccccccccccccccffffffff
 00000000ffffffffffffffff00000000ccaaacccccccccccaaaaaaaa000000000000000000000000000000000000000000000000ccccccccccccccccffffffff
